@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance · Check In / Out</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* additional UX polish for date picker */
+        .date-input-wrapper input[type="date"] {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .date-input-wrapper input[type="date"]:hover {
+            background: #f1f5f9;
+        }
+
+        .date-input-wrapper input[type="date"]::-webkit-datetime-edit {
+            padding: 2px 4px;
+        }
+
+        .quick-date-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: 8px;
+        }
+
+        .quick-date-btn {
+            background: #eef2f6;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+
+        .quick-date-btn:hover {
+            background: #d1d9e6;
+        }
+
+        .quick-date-btn.today {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .quick-date-btn.today:hover {
+            background: #1d4ed8;
+        }
+
+        .filter-group.date-range {
+            flex-wrap: wrap;
+        }
+
+        .date-range-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .quick-date-group {
+                margin-left: 0;
+                margin-top: 4px;
+            }
+        }
+
+        /* PDF color hint: style for export button */
+        .btn-pdf {
+            background: #b91c1c;
+        }
+
+        .btn-pdf:hover {
+            background: #991b1b;
+        }
+
+        /* display date in MMMM-dd-yyyy format in table */
+        .date-display {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* small badge for date format hint */
+        .date-format-hint {
+            font-size: 11px;
+            color: #64748b;
+            margin-left: 6px;
+            font-weight: 400;
+        }
+
+        /* enhance date picker UX: show as clickable field with icon */
+        .date-input-wrapper {
+            position: relative;
+        }
+
+        .date-input-wrapper input[type="date"] {
+            padding-right: 28px;
+            min-width: 140px;
+        }
+
+        .date-input-wrapper::after {
+            content: "📅";
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .date-input-wrapper input[type="date"]:focus {
+            outline: none;
+        }
+
+        /* validation style */
+        .date-error {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .date-error-message {
+            color: #dc2626;
+            font-size: 12px;
+            margin-top: 2px;
+            display: none;
+        }
+
+        .date-error-message.visible {
+            display: block;
+        }
+
+        .filter-group.date-range .date-range-row {
+            position: relative;
+        }
+
+        .date-inputs {
+            position: relative;
+        }
+
+        /* allow invalid date range to still apply (no blocking) */
+        .date-error-message.warning-only {
+            color: #eab308;
+        }
+
+        .date-error-message.warning-only.visible {
+            display: block;
+        }
+
+        .date-input-wrapper input[type="date"].warning {
+            border-color: #eab308;
+            box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Attendance · Check In / Out</h1>
+            <p class="subtitle">Upload CSV · view check‑in &amp; checkout times per employee per date</p>
+        </header>
+
+        <!-- upload zone -->
+        <div class="upload-section" id="uploadSection">
+            <input type="file" id="fileInput" accept=".csv" />
+            <label for="fileInput" class="upload-label">📁 Choose CSV File</label>
+            <p class="upload-info">or drag &amp; drop your CSV file here</p>
+            <p class="hint">Required columns: sName, Date, Time, AttendanceStatus</p>
+        </div>
+
+        <!-- loading spinner -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing attendance data...</p>
+        </div>
+
+        <!-- filters with enhanced date picker + quick actions -->
+        <div class="filters-section" id="filtersSection" style="display:none;">
+            <div class="filter-group date-range">
+                <label>📅 Date Range <span class="date-format-hint">(MMMM-dd-yyyy)</span></label>
+                <div class="date-range-row">
+                    <div class="date-inputs">
+                        <div class="date-input-wrapper">
+                            <span class="date-label">From</span>
+                            <input type="date" id="dateFrom" />
+                        </div>
+                        <span class="date-arrow">→</span>
+                        <div class="date-input-wrapper">
+                            <span class="date-label">To</span>
+                            <input type="date" id="dateTo" />
+                        </div>
+                    </div>
+                    <div class="quick-date-group">
+                        <button class="quick-date-btn today" onclick="setTodayRange()">📆 Today</button>
+                        <button class="quick-date-btn" onclick="setWeekRange()">📅 This week</button>
+                        <button class="quick-date-btn" onclick="setMonthRange()">📆 This month</button>
+                        <button class="quick-date-btn" onclick="clearDateRange()">✕ Clear</button>
+                    </div>
+                </div>
+                <div class="date-error-message warning-only" id="dateErrorMessage">⚠️ End date is before start date —
+                    records may be empty</div>
+            </div>
+            <div class="filter-group">
+                <label>👤 Employee</label>
+                <select id="employeeFilter">
+                    <option value="all">All Employees</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+                <button class="btn btn-outline" onclick="resetFilters()">Reset</button>
+            </div>
+        </div>
+
+        <!-- table -->
+        <div id="tableSection" style="display:none;">
+            <div class="table-header">
+                <h3>📋 Attendance Records</h3>
+                <span class="record-badge" id="recordCount">0 records</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Date</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- footer actions -->
+        <div class="footer-actions" id="footerActions" style="display:none;">
+            <div class="export-buttons">
+                <button class="btn btn-excel" onclick="exportExcel()">
+                    <span class="btn-icon">📊</span> Excel
+                </button>
+                <button class="btn btn-pdf" onclick="exportPDF()">
+                    <span class="btn-icon">📄</span> PDF
+                </button>
+                <button class="btn btn-success" onclick="exportCSV()">
+                    <span class="btn-icon">📋</span> CSV
+                </button>
+                <button class="btn btn-danger" onclick="clearData()">
+                    <span class="btn-icon">🗑️</span> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- external libraries -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js">
+    </script>
+    <!-- main application script -->
+    <script src="app.js">
+    </script>
+
+    <script>
+        // ============================================================
+        // DATE FORMAT HELPER: MMMM-dd-yyyy
+        // ============================================================
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1;
+            const day = parseInt(parts[2]);
+            const d = new Date(year, month, day);
+            if (isNaN(d.getTime())) return dateStr;
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            const mm = monthNames[d.getMonth()];
+            const dd = String(d.getDate()).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            return `${mm}-${dd}-${yyyy}`;
+        }
+
+        // ============================================================
+        // ENHANCED DATE PICKER UX with validation (warning only)
+        // ============================================================
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        const dateErrorMsg = document.getElementById('dateErrorMessage');
+
+        function validateDateRange() {
+            const fromVal = dateFrom.value;
+            const toVal = dateTo.value;
+            if (fromVal && toVal && fromVal > toVal) {
+                dateFrom.classList.add('warning');
+                dateTo.classList.add('warning');
+                dateErrorMsg.classList.add('visible');
+                return false;
+            } else {
+                dateFrom.classList.remove('warning');
+                dateTo.classList.remove('warning');
+                dateErrorMsg.classList.remove('visible');
+                return true;
+            }
+        }
+
+        // validate on change (warning only, no auto-correction)
+        dateFrom.addEventListener('change', function () {
+            validateDateRange();
+        });
+
+        dateTo.addEventListener('change', function () {
+            validateDateRange();
+        });
+
+        dateFrom.addEventListener('blur', validateDateRange);
+        dateTo.addEventListener('blur', validateDateRange);
+
+        // ============================================================
+        // ENHANCED DATE RANGE QUICK ACTIONS (UX)
+        // ============================================================
+        function setTodayRange() {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            dateFrom.value = dateStr;
+            dateTo.value = dateStr;
+            validateDateRange();
+            applyFilters();
+        }
+
+        function setWeekRange() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const monday = new Date(now);
+            monday.setDate(diff);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            const fmt = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+            dateFrom.value = fmt(monday);
+            dateTo.value = fmt(sunday);
+            validateDateRange();
+            applyFilters();
+        }
+
+        function setMonthRange() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const firstDay = `${y}-${m}-01`;
+            const lastDay = new Date(y, now.getMonth() + 1, 0);
+            const ld = String(lastDay.getDate()).padStart(2, '0');
+            const lastDayStr = `${y}-${m}-${ld}`;
+            dateFrom.value = firstDay;
+            dateTo.value = lastDayStr;
+            validateDateRange();
+            applyFilters();
+        }
+
+        function clearDateRange() {
+            dateFrom.value = '';
+            dateTo.value = '';
+            validateDateRange();
+            applyFilters();
+        }
+
+        // set default date to today
+        (function setDefaultDateEnhanced() {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            if (dateFrom) dateFrom.value = dateStr;
+            if (dateTo) dateTo.value = dateStr;
+            validateDateRange();
+        })();
+
+        // ============================================================
+        // OVERRIDE renderTable to show formatted dates
+        // ============================================================
+        const originalRenderTable = window.renderTable;
+        window.renderTable = function () {
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+            if (!filteredRecords || !filteredRecords.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="no-data">No records found</td></tr>`;
+                return;
+            }
+
+            const grouped = {};
+            filteredRecords.forEach(r => {
+                const key = r.name + '||' + r.date;
+                if (!grouped[key]) {
+                    grouped[key] = { name: r.name, date: r.date, records: [] };
+                }
+                grouped[key].records.push(r);
+            });
+
+            const rows = [];
+            Object.values(grouped).forEach(group => {
+                const sortedRecords = group.records.sort((a, b) => a.time.localeCompare(b.time));
+                let checkInTime = null;
+                let checkOutTime = null;
+                let hasCheckIn = false;
+                let hasCheckOut = false;
+
+                for (const record of sortedRecords) {
+                    const status = record.status.toLowerCase().trim();
+                    if (status.includes('checkin') ||
+                        status === 'check in' ||
+                        status === 'breakin' ||
+                        status === 'break in' ||
+                        status === 'overtimein' ||
+                        status === 'overtime in') {
+                        if (!hasCheckIn) {
+                            checkInTime = record.time;
+                            hasCheckIn = true;
+                        } else if (hasCheckIn && !hasCheckOut) {
+                            continue;
+                        } else if (hasCheckIn && hasCheckOut) {
+                            checkInTime = record.time;
+                            hasCheckIn = true;
+                            hasCheckOut = false;
+                            checkOutTime = null;
+                        }
+                    } else if (status.includes('checkout') ||
+                        status === 'check out' ||
+                        status === 'breakout' ||
+                        status === 'break out' ||
+                        status === 'overtimeout' ||
+                        status === 'overtime out') {
+                        if (hasCheckIn && !hasCheckOut) {
+                            checkOutTime = record.time;
+                            hasCheckOut = true;
+                            rows.push({
+                                name: group.name,
+                                date: group.date,
+                                checkIn: checkInTime,
+                                checkOut: checkOutTime
+                            });
+                            checkInTime = null;
+                            checkOutTime = null;
+                            hasCheckIn = false;
+                            hasCheckOut = false;
+                        }
+                    }
+                }
+                if (hasCheckIn && !hasCheckOut && checkInTime) {
+                    rows.push({
+                        name: group.name,
+                        date: group.date,
+                        checkIn: checkInTime,
+                        checkOut: ''
+                    });
+                }
+            });
+
+            rows.sort((a, b) => {
+                if (a.name !== b.name) return a.name.localeCompare(b.name);
+                return a.date.localeCompare(b.date);
+            });
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                const displayDate = formatDateDisplay(row.date);
+                tr.innerHTML = `
+                    <td><span class="employee-name">${esc(row.name)}</span></td>
+                    <td class="date-display">${esc(displayDate)}</td>
+                    <td class="checkin-cell">${esc(row.checkIn || '')}</td>
+                    <td class="checkout-cell">${esc(row.checkOut || '')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // ============================================================
+        // override getPairedRecords to keep raw date for exports
+        // ============================================================
+        window.getPairedRecords = function (records) {
+            const grouped = {};
+            records.forEach(r => {
+                const key = r.name + '||' + r.date;
+                if (!grouped[key]) {
+                    grouped[key] = { name: r.name, date: r.date, records: [] };
+                }
+                grouped[key].records.push(r);
+            });
+
+            const rows = [];
+            Object.values(grouped).forEach(group => {
+                const sortedRecords = group.records.sort((a, b) => a.time.localeCompare(b.time));
+                let checkInTime = null;
+                let checkOutTime = null;
+                let hasCheckIn = false;
+                let hasCheckOut = false;
+
+                for (const record of sortedRecords) {
+                    const status = record.status.toLowerCase().trim();
+                    if (status.includes('checkin') ||
+                        status === 'check in' ||
+                        status === 'breakin' ||
+                        status === 'break in' ||
+                        status === 'overtimein' ||
+                        status === 'overtime in') {
+                        if (!hasCheckIn) {
+                            checkInTime = record.time;
+                            hasCheckIn = true;
+                        } else if (hasCheckIn && !hasCheckOut) {
+                            continue;
+                        } else if (hasCheckIn && hasCheckOut) {
+                            checkInTime = record.time;
+                            hasCheckIn = true;
+                            hasCheckOut = false;
+                            checkOutTime = null;
+                        }
+                    } else if (status.includes('checkout') ||
+                        status === 'check out' ||
+                        status === 'breakout' ||
+                        status === 'break out' ||
+                        status === 'overtimeout' ||
+                        status === 'overtime out') {
+                        if (hasCheckIn && !hasCheckOut) {
+                            checkOutTime = record.time;
+                            hasCheckOut = true;
+                            rows.push({
+                                name: group.name,
+                                date: group.date,
+                                checkIn: checkInTime,
+                                checkOut: checkOutTime
+                            });
+                            checkInTime = null;
+                            checkOutTime = null;
+                            hasCheckIn = false;
+                            hasCheckOut = false;
+                        }
+                    }
+                }
+                if (hasCheckIn && !hasCheckOut && checkInTime) {
+                    rows.push({
+                        name: group.name,
+                        date: group.date,
+                        checkIn: checkInTime,
+                        checkOut: ''
+                    });
+                }
+            });
+            rows.sort((a, b) => {
+                if (a.name !== b.name) return a.name.localeCompare(b.name);
+                return a.date.localeCompare(b.date);
+            });
+            return rows;
+        };
+
+        // ============================================================
+        // ENHANCE PDF EXPORT WITH COLORS AND FORMATTED DATES
+        // ============================================================
+        window.exportPDF = async function () {
+            if (!filteredRecords || !filteredRecords.length) {
+                alert('No data to export.');
+                return;
+            }
+            const rows = getPairedRecords(filteredRecords);
+            const { PDFDocument, rgb, StandardFonts } = PDFLib;
+            const doc = await PDFDocument.create();
+            const font = await doc.embedFont(StandardFonts.Helvetica);
+            const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+            const page = doc.addPage([600, 800]);
+            let y = page.getSize().height - 40;
+            const lineH = 18;
+            const cols = [40, 160, 300, 440];
+
+            // header with color
+            const headerBg = rgb(0.06, 0.17, 0.27);
+            page.drawRectangle({
+                x: cols[0] - 4,
+                y: y - 14,
+                width: 440,
+                height: 20,
+                color: headerBg,
+            });
+            page.drawText('Employee', { x: cols[0], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+            page.drawText('Date', { x: cols[1], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+            page.drawText('Check In', { x: cols[2], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+            page.drawText('Check Out', { x: cols[3], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+            y -= lineH;
+
+            const drawRow = (row, index, currentPage) => {
+                const bgColor = index % 2 === 0 ? rgb(0.97, 0.98, 0.99) : rgb(0.94, 0.96, 0.98);
+                currentPage.drawRectangle({
+                    x: cols[0] - 4,
+                    y: y - 12,
+                    width: 440,
+                    height: 16,
+                    color: bgColor,
+                });
+                const displayDate = formatDateDisplay(row.date);
+                currentPage.drawText(String(row.name).substring(0, 20), {
+                    x: cols[0],
+                    y: y - 2,
+                    size: 9,
+                    font: font,
+                    color: rgb(0.1, 0.1, 0.1)
+                });
+                currentPage.drawText(displayDate, {
+                    x: cols[1],
+                    y: y - 2,
+                    size: 9,
+                    font: font,
+                    color: rgb(0.1, 0.1, 0.1)
+                });
+                currentPage.drawText(String(row.checkIn || '').substring(0, 15), {
+                    x: cols[2],
+                    y: y - 2,
+                    size: 9,
+                    font: font,
+                    color: rgb(0.12, 0.25, 0.69)
+                });
+                currentPage.drawText(String(row.checkOut || '').substring(0, 15), {
+                    x: cols[3],
+                    y: y - 2,
+                    size: 9,
+                    font: font,
+                    color: rgb(0.57, 0.25, 0.05)
+                });
+            };
+
+            for (let idx = 0; idx < rows.length; idx++) {
+                const row = rows[idx];
+                if (y < 40) {
+                    const np = doc.addPage([600, 800]);
+                    y = np.getSize().height - 40;
+                    const headerBgNew = rgb(0.06, 0.17, 0.27);
+                    np.drawRectangle({
+                        x: cols[0] - 4,
+                        y: y - 14,
+                        width: 440,
+                        height: 20,
+                        color: headerBgNew,
+                    });
+                    np.drawText('Employee', { x: cols[0], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+                    np.drawText('Date', { x: cols[1], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+                    np.drawText('Check In', { x: cols[2], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+                    np.drawText('Check Out', { x: cols[3], y: y - 2, size: 10, font: bold, color: rgb(1, 1, 1) });
+                    y -= lineH;
+                }
+                const currentPage = doc.getPages()[doc.getPages().length - 1];
+                drawRow(row, idx, currentPage);
+                y -= lineH;
+            }
+
+            const pdfBytes = await doc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            saveAs(blob, 'attendance_checkinout_colored.pdf');
+        };
+
+        // ============================================================
+        // ENHANCE CSV / EXCEL EXPORT WITH FORMATTED DATES
+        // ============================================================
+        window.exportCSV = function () {
+            if (!filteredRecords || !filteredRecords.length) {
+                alert('No data to export.');
+                return;
+            }
+            const rows = getPairedRecords(filteredRecords);
+            let csv = 'Employee,Date,Check In,Check Out\n';
+            rows.forEach(row => {
+                const displayDate = formatDateDisplay(row.date);
+                csv += `"${row.name}","${displayDate}","${row.checkIn || ''}","${row.checkOut || ''}"\n`;
+            });
+            downloadFile(csv, 'attendance_checkinout.csv', 'text/csv');
+        };
+
+        window.exportExcel = async function () {
+            if (!filteredRecords || !filteredRecords.length) {
+                alert('No data to export.');
+                return;
+            }
+            const rows = getPairedRecords(filteredRecords);
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'Attendance System';
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet('Attendance', {
+                properties: { tabColor: { argb: 'FF217346' } },
+                pageSetup: {
+                    orientation: 'landscape', fitToPage: true, margins: {
+                        left: 0.7, right: 0.7, top: 0.7,
+                        bottom: 0.7, header: 0.3, footer: 0.3
+                    }
+                }
+            });
+            worksheet.columns = [
+                { header: 'Employee', key: 'employee', width: 25 },
+                { header: 'Date', key: 'date', width: 20 },
+                { header: 'Check In', key: 'checkIn', width: 15 },
+                { header: 'Check Out', key: 'checkOut', width: 15 }
+            ];
+            const headerRow = worksheet.getRow(1);
+            headerRow.height = 30;
+            headerRow.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F2B45' } };
+            headerRow.border = {
+                top: { style: 'thin', color: { argb: 'FF1a5c38' } },
+                bottom: { style: 'thin', color: { argb: 'FF1a5c38' } },
+                left: { style: 'thin', color: { argb: 'FF1a5c38' } },
+                right: { style: 'thin', color: { argb: 'FF1a5c38' } }
+            };
+
+            rows.forEach((row, index) => {
+                const displayDate = formatDateDisplay(row.date);
+                const rowData = worksheet.addRow({
+                    employee: row.name,
+                    date: displayDate,
+                    checkIn: row.checkIn || '',
+                    checkOut: row.checkOut || ''
+                });
+                const rowNum = index + 2;
+                const rowRef = worksheet.getRow(rowNum);
+                rowRef.height = 24;
+                rowRef.alignment = { vertical: 'middle', horizontal: 'left' };
+                if (index % 2 === 0) {
+                    rowRef.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+                } else {
+                    rowRef.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+                }
+                const checkInCell = rowRef.getCell(3);
+                checkInCell.font = { name: 'Segoe UI', size: 11, color: { argb: 'FF1E40AF' } };
+                const checkOutCell = rowRef.getCell(4);
+                checkOutCell.font = { name: 'Segoe UI', size: 11, color: { argb: 'FF92400E' } };
+                rowRef.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'FFE9EDF2' } },
+                        bottom: { style: 'thin', color: { argb: 'FFE9EDF2' } },
+                        left: { style: 'thin', color: { argb: 'FFE9EDF2' } },
+                        right: { style: 'thin', color: { argb: 'FFE9EDF2' } }
+                    };
+                });
+            });
+            worksheet.autoFilter = { from: 'A1', to: 'D1' };
+            worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, 'attendance_checkinout.xlsx');
+        };
+
+        // ============================================================
+        // OVERRIDE applyFilters to validate before applying (warning only)
+        // ============================================================
+        const originalApplyFilters = window.applyFilters;
+        window.applyFilters = function () {
+            // just validate and show warning, but still apply
+            validateDateRange();
+            // call original
+            if (typeof originalApplyFilters === 'function') {
+                originalApplyFilters();
+            } else {
+                // fallback: manual apply
+                const employee = document.getElementById('employeeFilter').value;
+                const df = document.getElementById('dateFrom').value;
+                const dt = document.getElementById('dateTo').value;
+                filteredRecords = allRecords.filter(r => {
+                    if (df && r.date < df) return false;
+                    if (dt && r.date > dt) return false;
+                    if (employee !== 'all' && r.name !== employee) return false;
+                    return true;
+                });
+                renderTable();
+                document.getElementById('recordCount').textContent = `${filteredRecords.length} records`;
+            }
+        };
+
+        console.log('✅ Enhanced UX: date picker with warning (still applies) + MMMM-dd-yyyy format + colored PDF');
+    </script>
+</body>
+
+</html>
