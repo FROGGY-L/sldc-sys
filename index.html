@@ -5,71 +5,112 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Attendance · Check In / Out</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css" />
-
 </head>
 
 <body>
     <div class="container">
-        <header>
-            <h1>📋 Attendance · Check In / Out</h1>
-            <p class="subtitle">Upload CSV · view check‑in &amp; checkout times per employee per date</p>
+        <!-- ============ HEADER ============ -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-badge">📋</div>
+                <div>
+                    <h1>Attendance · Check In / Out</h1>
+                    <p class="subtitle">Upload a CSV file to view check‑in &amp; checkout times per employee</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-pill" id="statusPill">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Ready</span>
+                </div>
+            </div>
         </header>
 
-        <!-- upload zone -->
+        <!-- ============ UPLOAD ZONE ============ -->
         <div class="upload-section" id="uploadSection">
             <input type="file" id="fileInput" accept=".csv" />
-            <label for="fileInput" class="upload-label">📁 Choose CSV File</label>
-            <p class="upload-info">or drag &amp; drop your CSV file here</p>
-            <p class="hint">Required columns: sName, Date, Time, AttendanceStatus</p>
+            <div class="upload-icon">📁</div>
+            <label for="fileInput" class="upload-label">Choose CSV File</label>
+            <p class="upload-info">or drag &amp; drop your file here</p>
+            <p class="hint">
+                Required columns: <code>sName</code>, <code>Date</code>, <code>Time</code>,
+                <code>AttendanceStatus</code>
+            </p>
         </div>
 
-        <!-- loading spinner -->
+        <!-- ============ LOADING SPINNER ============ -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Processing attendance data...</p>
+            <p>Processing attendance data…</p>
         </div>
 
-        <!-- filters with enhanced date picker + quick actions -->
-        <div class="filters-section" id="filtersSection" style="display:none;">
-            <div class="filter-group date-range">
-                <label>📅 Date Range <span class="date-format-hint">(MMMM-dd-yyyy)</span></label>
+        <!-- ============ FILTERS ============ -->
+        <div class="filters-section" id="filtersSection">
+            <!-- Date Range Group -->
+            <div class="filter-group date-range-modern">
+                <label class="filter-label">
+                    <span>📅 Date Range</span>
+                    <span class="date-format-hint">MMMM-dd-yyyy</span>
+                </label>
                 <div class="date-range-row">
-                    <div class="date-inputs">
-                        <div class="date-input-wrapper">
-                            <span class="date-label">From</span>
+                    <div class="date-inputs-modern">
+                        <div class="date-input-modern">
+                            <span class="date-label-modern">From</span>
                             <input type="date" id="dateFrom" />
                         </div>
-                        <span class="date-arrow">→</span>
-                        <div class="date-input-wrapper">
-                            <span class="date-label">To</span>
+                        <span class="date-arrow-modern">→</span>
+                        <div class="date-input-modern">
+                            <span class="date-label-modern">To</span>
                             <input type="date" id="dateTo" />
                         </div>
                     </div>
-                    <div class="quick-date-group">
-                        <button class="quick-date-btn today" onclick="setTodayRange()">📆 Today</button>
-                        <button class="quick-date-btn" onclick="setWeekRange()">📅 This week</button>
-                        <button class="quick-date-btn" onclick="setMonthRange()">📆 This month</button>
-                        <button class="quick-date-btn" onclick="clearDateRange()">✕ Clear</button>
+                    <div class="quick-date-group-modern">
+                        <button type="button" class="quick-date-btn-modern today" onclick="setTodayRange()">
+                            <span>📆</span> Today
+                        </button>
+                        <button type="button" class="quick-date-btn-modern" onclick="setWeekRange()">
+                            <span>📅</span> This week
+                        </button>
+                        <button type="button" class="quick-date-btn-modern" onclick="setMonthRange()">
+                            <span>🗓️</span> This month
+                        </button>
+                        <button type="button" class="quick-date-btn-modern clear-btn" onclick="clearDateRange()">
+                            <span>✕</span> Clear
+                        </button>
                     </div>
                 </div>
-                <div class="date-error-message warning-only" id="dateErrorMessage">⚠️ End date is before start date —
-                    records may be empty</div>
+                <div class="date-error-message-modern" id="dateErrorMessage">
+                    ⚠️ End date is before start date — records may be empty
+                </div>
             </div>
+
+            <!-- Employee Filter -->
             <div class="filter-group">
-                <label>👤 Employee</label>
+                <label class="filter-label">
+                    <span>👤 Employee</span>
+                </label>
                 <select id="employeeFilter">
                     <option value="all">All Employees</option>
                 </select>
             </div>
+
+            <!-- Action Buttons -->
             <div class="filter-actions">
-                <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
-                <button class="btn btn-outline" onclick="resetFilters()">Reset</button>
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <span class="btn-icon">✓</span> Apply
+                </button>
+                <button class="btn btn-outline" onclick="resetFilters()">
+                    <span class="btn-icon">↻</span> Reset
+                </button>
             </div>
         </div>
 
-        <!-- table -->
-        <div id="tableSection" style="display:none;">
+        <!-- ============ TABLE ============ -->
+        <div id="tableSection" class="table-section">
             <div class="table-header">
                 <h3>📋 Attendance Records</h3>
                 <span class="record-badge" id="recordCount">0 records</span>
@@ -89,8 +130,11 @@
             </div>
         </div>
 
-        <!-- footer actions -->
-        <div class="footer-actions" id="footerActions" style="display:none;">
+        <!-- ============ FOOTER EXPORT ============ -->
+        <div class="footer-actions" id="footerActions">
+            <div class="footer-left">
+                <span class="footer-hint">Export the currently filtered records</span>
+            </div>
             <div class="export-buttons">
                 <button class="btn btn-excel" onclick="exportExcel()">
                     <span class="btn-icon">📊</span> Excel
@@ -108,18 +152,16 @@
         </div>
     </div>
 
-    <!-- external libraries -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js">
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js">
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js">
-    </script>
-    <!-- main application script -->
-    <script src="app.js">
-    </script>
+    <!-- ============ TOAST ============ -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ============ EXTERNAL LIBRARIES ============ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
+    <!-- ============ APP SCRIPT ============ -->
+    <script src="app.js"></script>
 </body>
 
 </html>
