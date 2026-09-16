@@ -114,8 +114,13 @@ h1 {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Filters - Enhanced Date Range */
@@ -517,4 +522,246 @@ tbody td {
         font-size: 12px;
         min-width: 90px;
     }
+}
+
+/* additional UX polish for date picker */
+.date-input-wrapper input[type="date"] {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.date-input-wrapper input[type="date"]:hover {
+    background: #f1f5f9;
+}
+
+.date-input-wrapper input[type="date"]::-webkit-datetime-edit {
+    padding: 2px 4px;
+}
+
+.quick-date-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-left: 8px;
+}
+
+.quick-date-btn {
+    background: #eef2f6;
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1e293b;
+    cursor: pointer;
+    transition: 0.15s;
+    white-space: nowrap;
+}
+
+.quick-date-btn:hover {
+    background: #d1d9e6;
+}
+
+.quick-date-btn.today {
+    background: #2563eb;
+    color: #fff;
+}
+
+.quick-date-btn.today:hover {
+    background: #1d4ed8;
+}
+
+.filter-group.date-range {
+    flex-wrap: wrap;
+}
+
+.date-range-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .quick-date-group {
+        margin-left: 0;
+        margin-top: 4px;
+    }
+}
+
+/* PDF color hint: style for export button */
+.btn-pdf {
+    background: #b91c1c;
+}
+
+.btn-pdf:hover {
+    background: #991b1b;
+}
+
+/* display date in MMMM-dd-yyyy format in table */
+.date-display {
+    font-variant-numeric: tabular-nums;
+}
+
+/* small badge for date format hint */
+.date-format-hint {
+    font-size: 11px;
+    color: #64748b;
+    margin-left: 6px;
+    font-weight: 400;
+}
+
+/* additional UX polish for date picker */
+.date-input-wrapper input[type="date"] {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.date-input-wrapper input[type="date"]:hover {
+    background: #f1f5f9;
+}
+
+.date-input-wrapper input[type="date"]::-webkit-datetime-edit {
+    padding: 2px 4px;
+}
+
+.quick-date-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-left: 8px;
+}
+
+.quick-date-btn {
+    background: #eef2f6;
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1e293b;
+    cursor: pointer;
+    transition: 0.15s;
+    white-space: nowrap;
+}
+
+.quick-date-btn:hover {
+    background: #d1d9e6;
+}
+
+.quick-date-btn.today {
+    background: #2563eb;
+    color: #fff;
+}
+
+.quick-date-btn.today:hover {
+    background: #1d4ed8;
+}
+
+.filter-group.date-range {
+    flex-wrap: wrap;
+}
+
+.date-range-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .quick-date-group {
+        margin-left: 0;
+        margin-top: 4px;
+    }
+}
+
+/* PDF color hint: style for export button */
+.btn-pdf {
+    background: #b91c1c;
+}
+
+.btn-pdf:hover {
+    background: #991b1b;
+}
+
+/* display date in MMMM-dd-yyyy format in table */
+.date-display {
+    font-variant-numeric: tabular-nums;
+}
+
+/* small badge for date format hint */
+.date-format-hint {
+    font-size: 11px;
+    color: #64748b;
+    margin-left: 6px;
+    font-weight: 400;
+}
+
+/* enhance date picker UX: show as clickable field with icon */
+.date-input-wrapper {
+    position: relative;
+}
+
+.date-input-wrapper input[type="date"] {
+    padding-right: 28px;
+    min-width: 140px;
+}
+
+.date-input-wrapper::after {
+    content: "📅";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.date-input-wrapper input[type="date"]:focus {
+    outline: none;
+}
+
+/* validation style */
+.date-error {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
+}
+
+.date-error-message {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 2px;
+    display: none;
+}
+
+.date-error-message.visible {
+    display: block;
+}
+
+.filter-group.date-range .date-range-row {
+    position: relative;
+}
+
+.date-inputs {
+    position: relative;
+}
+
+/* allow invalid date range to still apply (no blocking) */
+.date-error-message.warning-only {
+    color: #eab308;
+}
+
+.date-error-message.warning-only.visible {
+    display: block;
+}
+
+.date-input-wrapper input[type="date"].warning {
+    border-color: #eab308;
+    box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.2);
 }
