@@ -5,7 +5,7 @@ let allRecords = [];
 let filteredRecords = [];
 let employeeNames = {};
 
-// DOM refs
+// DOM refs — tool view
 const uploadSection = document.getElementById("uploadSection");
 const fileInput = document.getElementById("fileInput");
 const loadingEl = document.getElementById("loading");
@@ -18,9 +18,71 @@ const dateFrom = document.getElementById("dateFrom");
 const dateTo = document.getElementById("dateTo");
 const recordCount = document.getElementById("recordCount");
 const dateErrorMsg = document.getElementById("dateErrorMessage");
-const statusPill = document.getElementById("statusPill");
-const statusText = document.getElementById("statusText");
 const toastEl = document.getElementById("toast");
+
+// View refs
+const homeView = document.getElementById("homeView");
+const toolView = document.getElementById("toolView");
+const goToToolBtn = document.getElementById("goToToolBtn");
+const backToHomeBtn = document.getElementById("backToHomeBtn");
+const learnMoreBtn = document.getElementById("learnMoreBtn");
+
+// Tool status refs (injected dynamically below)
+let toolStatusPill = null;
+let toolStatusText = null;
+
+// ============================================================
+// VIEW SWITCHING
+// ============================================================
+function showHome() {
+  homeView.classList.remove("view-hidden");
+  toolView.classList.add("view-hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function showTool() {
+  homeView.classList.add("view-hidden");
+  toolView.classList.remove("view-hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+goToToolBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  showTool();
+});
+
+backToHomeBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  showHome();
+});
+
+learnMoreBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  showToast(
+    "Upload a CSV with sName, Date, Time, AttendanceStatus columns.",
+    "info",
+  );
+});
+
+// ============================================================
+// TOOL STATUS PILL (created dynamically inside tool header)
+// ============================================================
+function injectToolStatus() {
+  const toolHeader = document.querySelector(".tool-header");
+  if (!toolHeader || document.getElementById("toolStatusPill")) return;
+
+  const statusDiv = document.createElement("div");
+  statusDiv.className = "status-pill";
+  statusDiv.id = "toolStatusPill";
+  statusDiv.style.marginLeft = "auto";
+  statusDiv.innerHTML =
+    '<span class="status-dot"></span><span id="toolStatusText">Ready</span>';
+  toolHeader.appendChild(statusDiv);
+
+  toolStatusPill = document.getElementById("toolStatusPill");
+  toolStatusText = document.getElementById("toolStatusText");
+}
+injectToolStatus();
 
 // ============================================================
 // TOAST
@@ -39,11 +101,11 @@ function showToast(message, type = "info") {
 }
 
 // ============================================================
-// STATUS PILL
+// STATUS PILL (tool)
 // ============================================================
 function setStatus(text, active = false) {
-  if (statusText) statusText.textContent = text;
-  if (statusPill) statusPill.classList.toggle("active", active);
+  if (toolStatusText) toolStatusText.textContent = text;
+  if (toolStatusPill) toolStatusPill.classList.toggle("active", active);
 }
 
 // ============================================================
@@ -339,9 +401,7 @@ function showSections(show) {
 
 function showLoading(active) {
   loadingEl.classList.toggle("active", active);
-  if (active) {
-    uploadSection.style.display = "none";
-  }
+  uploadSection.style.display = active ? "none" : "";
 }
 
 function updateEmployeeFilter() {
@@ -505,7 +565,6 @@ async function exportExcel() {
     return;
   }
 
-  // ---------- BUILD WORKBOOK ----------
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Attendance System";
   workbook.lastModifiedBy = "Attendance System";
@@ -519,7 +578,7 @@ async function exportExcel() {
   const worksheet = workbook.addWorksheet("Attendance", {
     properties: { tabColor: { argb: "FF217346" } },
     pageSetup: {
-      paperSize: 9, // A4
+      paperSize: 9,
       orientation: "landscape",
       fitToPage: true,
       fitToWidth: 1,
@@ -533,7 +592,7 @@ async function exportExcel() {
         header: 0.3,
         footer: 0.3,
       },
-      printTitlesRow: "5:5", // repeat header row on every printed page
+      printTitlesRow: "5:5",
     },
     headerFooter: {
       oddHeader: '&C&"Inter,Bold"&12Attendance Report',
@@ -542,14 +601,13 @@ async function exportExcel() {
     views: [
       {
         state: "frozen",
-        ySplit: 5, // freeze title + meta + header rows
+        ySplit: 5,
         xSplit: 0,
         activeCell: "A6",
       },
     ],
   });
 
-  // ---------- COLUMN WIDTHS ----------
   worksheet.columns = [
     { key: "num", width: 6 },
     { key: "employee", width: 28 },
@@ -563,7 +621,7 @@ async function exportExcel() {
   const TOTAL_COLS = 7;
   const LAST_COL_LETTER = "G";
 
-  // ---------- TITLE ROW (row 1) ----------
+  // Title
   worksheet.mergeCells(`A1:${LAST_COL_LETTER}1`);
   const titleCell = worksheet.getCell("A1");
   titleCell.value = "ATTENDANCE  ·  CHECK IN / OUT REPORT";
@@ -581,7 +639,7 @@ async function exportExcel() {
   };
   worksheet.getRow(1).height = 42;
 
-  // ---------- META ROW (row 2) ----------
+  // Meta
   worksheet.mergeCells(`A2:${LAST_COL_LETTER}2`);
   const metaCell = worksheet.getCell("A2");
   const fromText = dateFrom.value
@@ -608,10 +666,9 @@ async function exportExcel() {
   };
   worksheet.getRow(2).height = 24;
 
-  // ---------- SPACER (row 3) ----------
   worksheet.getRow(3).height = 8;
 
-  // ---------- SUMMARY ROW (row 4) ----------
+  // Summary
   worksheet.mergeCells(`A4:${LAST_COL_LETTER}4`);
   const summaryCell = worksheet.getCell("A4");
   summaryCell.value = `Total Employees: ${new Set(rows.map((r) => r.name)).size}     •     Total Rows: ${rows.length}`;
@@ -629,7 +686,7 @@ async function exportExcel() {
   };
   worksheet.getRow(4).height = 22;
 
-  // ---------- HEADER ROW (row 5) ----------
+  // Header row
   const headers = [
     "#",
     "Employee",
@@ -664,7 +721,6 @@ async function exportExcel() {
     };
   });
 
-  // ---------- HELPER: parse "HH:MM:SS" or "HH:MM" to minutes ----------
   function timeToMinutes(t) {
     if (!t) return null;
     const parts = String(t)
@@ -682,7 +738,6 @@ async function exportExcel() {
     return `${h}h ${String(m).padStart(2, "0")}m`;
   }
 
-  // ---------- DATA ROWS ----------
   const firstDataRow = 6;
 
   rows.forEach((row, index) => {
@@ -690,7 +745,6 @@ async function exportExcel() {
     const r = worksheet.getRow(rowNum);
     const displayDate = formatDateDisplay(row.date);
 
-    // Compute duration
     const inMin = timeToMinutes(row.checkIn);
     const outMin = timeToMinutes(row.checkOut);
     const durationMin =
@@ -699,9 +753,8 @@ async function exportExcel() {
         : null;
     const durationText = minutesToDuration(durationMin);
 
-    // Determine row status
     let statusText = "Complete";
-    let statusColor = "FF16A34A"; // green
+    let statusColor = "FF16A34A";
     let statusBg = "FFDCFCE7";
 
     if (!row.checkIn && !row.checkOut) {
@@ -730,7 +783,6 @@ async function exportExcel() {
 
     r.height = 24;
 
-    // Alternating row background
     const zebra = index % 2 === 0 ? "FFFFFFFF" : "FFF8FAFC";
 
     r.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -748,17 +800,14 @@ async function exportExcel() {
         right: { style: "hair", color: { argb: "FFE2E8F0" } },
       };
 
-      // Center-align specific columns
       if ([1, 3, 4, 5, 6, 7].includes(colNumber)) {
         cell.alignment = { vertical: "middle", horizontal: "center" };
       }
     });
 
-    // Column 1 — index
     const c1 = r.getCell(1);
     c1.font = { name: "Inter", size: 10, color: { argb: "FF64748B" } };
 
-    // Column 2 — employee name (bold)
     const c2 = r.getCell(2);
     c2.font = {
       name: "Inter",
@@ -768,7 +817,6 @@ async function exportExcel() {
     };
     c2.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
 
-    // Column 4 — check-in (blue)
     const c4 = r.getCell(4);
     c4.font = {
       name: "Inter",
@@ -778,7 +826,6 @@ async function exportExcel() {
     };
     c4.alignment = { vertical: "middle", horizontal: "center" };
 
-    // Column 5 — check-out (amber)
     const c5 = r.getCell(5);
     c5.font = {
       name: "Inter",
@@ -788,12 +835,10 @@ async function exportExcel() {
     };
     c5.alignment = { vertical: "middle", horizontal: "center" };
 
-    // Column 6 — duration
     const c6 = r.getCell(6);
     c6.font = { name: "Inter", size: 10.5, color: { argb: "FF475569" } };
     c6.alignment = { vertical: "middle", horizontal: "center" };
 
-    // Column 7 — status badge
     const c7 = r.getCell(7);
     c7.font = {
       name: "Inter",
@@ -815,7 +860,7 @@ async function exportExcel() {
     };
   });
 
-  // ---------- FOOTER SUMMARY ROW ----------
+  // Footer summary row
   const footerRowNum = firstDataRow + rows.length;
   const footerRow = worksheet.getRow(footerRowNum);
   worksheet.mergeCells(`A${footerRowNum}:C${footerRowNum}`);
@@ -861,28 +906,24 @@ async function exportExcel() {
     };
   });
 
-  // Left-align merged total label
   footerRow.getCell(1).alignment = {
     vertical: "middle",
     horizontal: "left",
     indent: 1,
   };
 
-  // ---------- AUTO FILTER ----------
   worksheet.autoFilter = {
     from: { row: 5, column: 1 },
     to: { row: 5, column: TOTAL_COLS },
   };
 
-  // ---------- CONDITIONAL FORMATTING — duration highlight ----------
-  // Highlight durations under 4h in soft red (short shifts)
   worksheet.addConditionalFormatting({
     ref: `F${firstDataRow}:F${footerRowNum - 1}`,
     rules: [
       {
         type: "cellIs",
         operator: "lessThan",
-        formulae: [(4 * 60) / 1440], // 4 hours expressed as a fraction of a day
+        formulae: [(4 * 60) / 1440],
         style: {
           fill: {
             type: "pattern",
@@ -896,20 +937,6 @@ async function exportExcel() {
     ],
   });
 
-  // ---------- SHEET PROTECTION (optional, keeps layout intact) ----------
-  // worksheet.protect("attendance", {
-  //     selectLockedCells: true,
-  //     selectUnlockedCells: true,
-  //     formatCells: false,
-  //     formatColumns: false,
-  //     formatRows: false,
-  //     insertRows: false,
-  //     deleteRows: false,
-  //     sort: true,
-  //     autoFilter: true,
-  // });
-
-  // ---------- WRITE & SAVE ----------
   try {
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
@@ -929,6 +956,7 @@ async function exportExcel() {
     showToast("Failed to export Excel: " + err.message, "error");
   }
 }
+
 // ============================================================
 // PDF EXPORT
 // ============================================================
@@ -1131,3 +1159,17 @@ function clearData() {
   setStatus("Ready");
   showToast("🗑️ All data cleared", "success");
 }
+
+// ============================================================
+// EXPOSE GLOBALS for inline onclick handlers
+// ============================================================
+window.setTodayRange = setTodayRange;
+window.setWeekRange = setWeekRange;
+window.setMonthRange = setMonthRange;
+window.clearDateRange = clearDateRange;
+window.applyFilters = applyFilters;
+window.resetFilters = resetFilters;
+window.exportExcel = exportExcel;
+window.exportPDF = exportPDF;
+window.exportCSV = exportCSV;
+window.clearData = clearData;
