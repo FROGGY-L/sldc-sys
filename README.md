@@ -217,7 +217,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 ## 👤 Author
 
 **Your Name**
-- GitHub: [@your-username]([https://github.com/your-username](https://github.com/FROGGY-L))
+- GitHub: [@FROGGY-L](https://github.com/FROGGY-L)
 - Email: acelimbag05@gmail.com
 
 ---
