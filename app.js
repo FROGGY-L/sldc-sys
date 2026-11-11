@@ -245,12 +245,15 @@ function handleFile(file) {
 function cleanValue(val) {
   if (!val) return "";
   let cleaned = val.trim();
+  // Remove surrounding quotes
   if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
     cleaned = cleaned.substring(1, cleaned.length - 1);
   }
   if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
     cleaned = cleaned.substring(1, cleaned.length - 1);
   }
+  // Remove stray leading/trailing quotes and commas
+  cleaned = cleaned.replace(/^['",]+|['",]+$/g, "");
   return cleaned.trim();
 }
 
@@ -445,48 +448,41 @@ function resetFilters() {
 function pairAttendanceRecords(records) {
   const grouped = {};
 
+  // 1. Group records by Employee and Date
   records.forEach((r) => {
     const key = r.name + "||" + r.date;
     if (!grouped[key]) {
-      grouped[key] = { name: r.name, date: r.date, records: [] };
+      grouped[key] = { name: r.name, date: r.date, times: [] };
     }
-    grouped[key].records.push(r);
+    
+    // We only want records that actually have a time
+    if (r.time) {
+      // Standardize time format (HH:MM:SS) just in case
+      let timeStr = r.time.trim();
+      // If the time has no seconds, add them so sorting works correctly
+      if (timeStr.split(':').length === 2) timeStr += ":00";
+      
+      grouped[key].times.push(timeStr);
+    }
   });
 
   const rows = [];
 
+  // 2. Process each group
   Object.values(grouped).forEach((group) => {
-    const sortedRecords = group.records
-      .slice()
-      .sort((a, b) => a.time.localeCompare(b.time));
+    // Sort the times chronologically (e.g., "07:19:00" comes before "17:00:00")
+    group.times.sort();
 
     let checkInTime = "";
     let checkOutTime = "";
 
-    for (const record of sortedRecords) {
-      const status = record.status.toLowerCase().trim();
-
-      const isIn =
-        status.includes("checkin") ||
-        status === "check in" ||
-        status === "breakin" ||
-        status === "break in" ||
-        status === "overtimein" ||
-        status === "overtime in";
-
-      const isOut =
-        status.includes("checkout") ||
-        status === "check out" ||
-        status === "breakout" ||
-        status === "break out" ||
-        status === "overtimeout" ||
-        status === "overtime out";
-
-      if (isIn) {
-        if (!checkInTime) checkInTime = record.time;
-      } else if (isOut) {
-        if (checkInTime) checkOutTime = record.time;
-      }
+    if (group.times.length > 0) {
+      checkInTime = group.times[0]; // Earliest time is Check In
+    }
+    
+    // If they punched more than once, the latest punch is the Check Out
+    if (group.times.length > 1) {
+      checkOutTime = group.times[group.times.length - 1];
     }
 
     if (checkInTime || checkOutTime) {
@@ -499,6 +495,7 @@ function pairAttendanceRecords(records) {
     }
   });
 
+  // 3. Sort the final output by Name, then Date
   rows.sort((a, b) => {
     if (a.name !== b.name) return a.name.localeCompare(b.name);
     return a.date.localeCompare(b.date);
